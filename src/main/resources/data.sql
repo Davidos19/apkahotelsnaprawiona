@@ -1,4 +1,6 @@
 -- ✅ UŻYTKOWNICY
+UPDATE users SET role = 'ADMIN' WHERE username = 'admin';
+
 INSERT INTO users (username, email, password, first_name, last_name, phone_number, role, is_active, created_at, updated_at) VALUES
                                                                                                                                 ('admin', 'admin@example.com', '$2a$12$wOy3w9MV3jy9PM2iy4qS6ejPY2VVyIj.O2tVLgs1vokCdOCBzA.mm', 'Admin', 'Administrator', '+48 123 456 789', 'ADMIN', true, NOW(), NOW()),
                                                                                                                                 ('manager', 'manager@example.com', '$2a$12$HvorXCcpYbZXy9IeTfWdXOEycg5wT7T5N/GbB/XzEVBCrD6cJbwOm', 'Marek', 'Manager', '+48 123 456 788', 'ADMIN', true, NOW(), NOW()),

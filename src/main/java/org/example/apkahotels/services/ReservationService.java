@@ -28,19 +28,21 @@ public class ReservationService {
     private final UserService userService;
     private final RoomService roomService;
     private final UserRepository userRepository;
+    private final EmailService emailService; // ✅ DODAJ EMAIL
 
     public ReservationService(HotelRepository hotelRepository,
                               ReservationRepository reservationRepository,
                               UserService userService,
                               RoomService roomService,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              EmailService emailService) { // ✅ DODAJ EMAIL
         this.hotelRepository = hotelRepository;
         this.reservationRepository = reservationRepository;
         this.userService = userService;
         this.roomService = roomService;
         this.userRepository = userRepository;
+        this.emailService = emailService; // ✅ DODAJ EMAIL
     }
-
 
     // ===== METODY HOTELI =====
     public List<Hotel> getAllHotels() {
@@ -69,7 +71,6 @@ public class ReservationService {
         }
     }
 
-
     // ===== METODY REZERWACJI =====
     public Reservation getReservationById(Long id) {
         return reservationRepository.findById(id).orElse(null); // JPA standardowa metoda
@@ -80,13 +81,30 @@ public class ReservationService {
     }
 
     public void cancelReservation(Long reservationId) {
-        Optional<Reservation> reservation = reservationRepository.findById(reservationId);
-        if (reservation.isPresent()) {
+        Optional<Reservation> reservationOpt = reservationRepository.findById(reservationId);
+        if (reservationOpt.isPresent()) {
+            Reservation reservation = reservationOpt.get(); // ✅ WYCIĄGNIJ Z OPTIONAL
+
+            // ✅ WYŚLIJ EMAIL ANULOWANIA
+            try {
+                AppUser user = userRepository.findByUsername(reservation.getUsername()).orElse(null);
+                if (user != null && user.getEmail() != null) {
+                    Hotel hotel = hotelRepository.findById(reservation.getHotelId()).orElse(null);
+
+                    if (hotel != null) {
+                        emailService.sendBookingCancellation(user.getEmail(), reservation, hotel);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Błąd wysyłania email anulowania: " + e.getMessage());
+            }
+
             reservationRepository.deleteById(reservationId); // JPA standardowa metoda
         } else {
             throw new RuntimeException("Rezerwacja nie została znaleziona");
         }
     }
+
     public void makeReservation(Reservation reservation) {
         // Walidacja
         if (reservation.getCheckIn() == null || reservation.getCheckOut() == null) {
@@ -142,7 +160,25 @@ public class ReservationService {
         reservation.setEndDate(reservation.getCheckOut());
 
         reservation.setCreatedAt(LocalDateTime.now());
-        reservationRepository.save(reservation);
+        Reservation savedReservation = reservationRepository.save(reservation);
+
+        // ✅ WYŚLIJ EMAIL POTWIERDZENIE
+        try {
+            AppUser user = userRepository.findByUsername(reservation.getUsername()).orElse(null);
+            if (user != null && user.getEmail() != null) {
+                Hotel hotel = hotelRepository.findById(reservation.getHotelId()).orElse(null);
+                Room room = roomService.getRoomById(reservation.getRoomId());
+
+                if (hotel != null && room != null) {
+                    emailService.sendBookingConfirmation(user.getEmail(), savedReservation, hotel, room);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Błąd wysyłania email potwierdzenia: " + e.getMessage());
+        }
+    }
+    public Optional<Reservation> findById(Long id) {
+        return reservationRepository.findById(id);
     }
 
     public void updateReservation(Reservation reservation) {
@@ -199,8 +235,6 @@ public class ReservationService {
         return List.of();
     }
 
-
-
     public List<Reservation> getActiveReservationsByUsername(String username) {
         LocalDate today = LocalDate.now();
         // ZMIEŃ: findByUsername -> findByUsernameOrderByCheckInDesc
@@ -236,11 +270,11 @@ public class ReservationService {
                 .count();
         stats.put("future", future);
 
-        // Całkowita kwota wydana
+        // ✅ POPRAWIONY - używamy double zamiast BigDecimal
         Double totalSpent = userReservations.stream()
                 .mapToDouble(r -> r.getTotalPrice().doubleValue())
                 .sum();
-        stats.put("totalSpent", BigDecimal.valueOf(totalSpent));
+        stats.put("totalSpent", totalSpent); // ZMIENIONE: usunięte BigDecimal.valueOf()
 
         return stats;
     }
@@ -249,8 +283,6 @@ public class ReservationService {
         // ZMIEŃ: findByUsername -> findByUsernameOrderByCheckInDesc
         return reservationRepository.findByUsernameOrderByCheckInDesc(username).size();
     }
-
-
 
     public void deleteReservation(Long reservationId) {
         reservationRepository.deleteById(reservationId); // JPA standardowa metoda
@@ -277,6 +309,7 @@ public class ReservationService {
                 .limit(limit)
                 .collect(Collectors.toList());
     }
+
     public List<Reservation> getReservationsByUserId(Long userId) {
         AppUser user = userRepository.findById(userId).orElse(null);
         if (user != null) {
@@ -284,5 +317,4 @@ public class ReservationService {
         }
         return List.of();
     }
-
 }

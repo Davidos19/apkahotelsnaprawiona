@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
@@ -37,8 +36,10 @@
                     <div class="dropdown-menu">
                         <a class="dropdown-item" th:href="@{/admin/hotels}">🏨 Zarządzaj Hotelami</a>
                         <a class="dropdown-item" th:href="@{/admin/hotels/dashboard}">📊 Dashboard</a>
-                        <a class="dropdown-item" th:href="@{/admin/hotels/users}">👥 Użytkownicy</a>
+                        <a class="dropdown-item" th:href="@{/admin/users}">👥 Użytkownicy</a>
                         <a class="dropdown-item" th:href="@{/admin/reservations}">📋 Wszystkie Rezerwacje</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" th:href="@{/admin/emails/test}">📧 Test Email</a>
                     </div>
                 </li>
 

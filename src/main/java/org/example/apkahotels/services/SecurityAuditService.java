@@ -15,7 +15,7 @@ public class SecurityAuditService {
     private final List<String> auditLogs = new ArrayList<>();
     private final ConcurrentHashMap<String, Integer> loginAttempts = new ConcurrentHashMap<>();
 
-    // ✅ PROSTY LOG
+    // ✅ PROSTY LOG z null check
     public void logActivity(String action, String details) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth != null ? auth.getName() : "anonymous";

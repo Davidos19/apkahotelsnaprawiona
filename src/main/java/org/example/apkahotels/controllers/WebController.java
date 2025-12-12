@@ -235,7 +235,7 @@ public class WebController {
                             assignedRoom.getRoomNumber(), roomType + " " + capacity + " os.",
                             reservation.getTotalPrice()));
 
-            return "redirect:/myReservations";
+            return "redirect:/my-reservations";
 
         } catch (Exception e) {
             logger.error("Błąd rezerwacji: {}", e.getMessage());
@@ -299,11 +299,7 @@ public class WebController {
         return "index";
     }
 
-    @GetMapping("/myReservations")
-    public String myReservations(Model model) {
-        model.addAttribute("reservations", reservationService.getUserReservations());
-        return "my_reservations";
-    }
+
 
     private LocalDate parseDate(String dateStr) {
         if (dateStr == null || dateStr.trim().isEmpty()) {

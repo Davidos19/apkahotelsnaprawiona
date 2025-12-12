@@ -36,8 +36,10 @@ public class HotelService {
 
     @Cacheable(value = "hotels", key = "#id")
     public Hotel getHotelById(Long id) {
-        return hotelRepository.findById(id).orElse(null);
+        return hotelRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Hotel not found with id: " + id));
     }
+
 
     @CacheEvict(value = "hotels", allEntries = true)
     public Hotel saveHotel(Hotel hotel) {

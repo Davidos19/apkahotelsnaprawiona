@@ -1,3 +1,4 @@
+
 package org.example.apkahotels.repositories;
 
 import org.example.apkahotels.models.Hotel;
@@ -25,4 +26,7 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
     // ✅ NAJPOPULARNIEJSZE HOTELE
     @Query("SELECT h FROM Hotel h ORDER BY h.name")
     List<Hotel> findTopRatedHotels();
+
+    // ✅ DODANA METODA DLA TESTÓW - wyszukiwanie po nazwie LUB mieście
+    List<Hotel> findByNameContainingIgnoreCaseOrCityContainingIgnoreCase(String name, String city);
 }

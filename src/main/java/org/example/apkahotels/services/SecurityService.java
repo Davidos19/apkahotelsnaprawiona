@@ -1,3 +1,4 @@
+
 package org.example.apkahotels.services;
 
 import org.example.apkahotels.models.AppUser;
@@ -19,7 +20,8 @@ public class SecurityService {
     }
 
     public String getCurrentUsername() {
-        return SecurityContextHolder.getContext().getAuthentication().getName();
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null ? authentication.getName() : "anonymousUser";
     }
 
     public Optional<AppUser> getCurrentUser() {

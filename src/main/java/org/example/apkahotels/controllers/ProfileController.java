@@ -3,6 +3,7 @@ package org.example.apkahotels.controllers;
 
 import org.example.apkahotels.models.*;
 import org.example.apkahotels.services.*;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
@@ -10,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -82,20 +84,102 @@ public class ProfileController {
 
         return "profile";  // widok Thymeleaf (np. profile.html)
     }
-
-    @GetMapping("/my-reservations") // lub podobny endpoint
-    public String myReservations(Model model, Principal principal) {
+    @GetMapping("/cancelReservation/{id}")
+    public String cancelReservation(@PathVariable Long id,
+                                    RedirectAttributes redirectAttributes,
+                                    Authentication authentication) {
         try {
-            String username = principal.getName();
+            String currentUsername = authentication.getName();
+
+            Optional<Reservation> reservationOpt = reservationService.findById(id);
+            if (reservationOpt.isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Rezerwacja nie została znaleziona");
+                return "redirect:/my-reservations";
+            }
+
+            Reservation reservation = reservationOpt.get();
+
+            if (!reservation.getUsername().equals(currentUsername)) {
+                redirectAttributes.addFlashAttribute("error", "Nie masz uprawnień do anulowania tej rezerwacji");
+                return "redirect:/my-reservations";
+            }
+
+            reservationService.cancelReservation(id);
+            redirectAttributes.addFlashAttribute("message", "✅ Rezerwacja została anulowana");
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "❌ Błąd podczas anulowania: " + e.getMessage());
+        }
+
+        return "redirect:/my-reservations";
+    }
+
+
+
+    @GetMapping("/my-reservations")
+    public String myReservations(Model model, Authentication authentication) {
+        try {
+            String username = authentication.getName();
             List<Reservation> reservations = reservationService.getReservationsByUsername(username);
+
+            // ✅ ZAWSZE INICJALIZUJ MAPY - nawet jeśli puste!
+            Map<Long, Hotel> hotelDetails = new HashMap<>();
+            Map<Long, Room> roomDetails = new HashMap<>();
+
+            // ✅ DODAJ NULL CHECK dla rezerwacji
+            if (reservations != null && !reservations.isEmpty()) {
+                for (Reservation res : reservations) {
+                    if (res == null) continue; // Skip null reservations
+
+                    // Pobierz hotel
+                    if (res.getHotelId() != null) {
+                        try {
+                            Hotel hotel = hotelService.getHotelById(res.getHotelId());
+                            if (hotel != null) {
+                                hotelDetails.put(res.getHotelId(), hotel);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Hotel nie znaleziony: " + res.getHotelId() + " - " + e.getMessage());
+                        }
+                    }
+
+                    // Pobierz pokój
+                    if (res.getRoomId() != null) {
+                        try {
+                            Room room = roomService.getRoomById(res.getRoomId());
+                            if (room != null) {
+                                roomDetails.put(res.getRoomId(), room);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("Pokój nie znaleziony: " + res.getRoomId() + " - " + e.getMessage());
+                        }
+                    }
+                }
+            } else {
+                // Brak rezerwacji - ustaw pustą listę
+                reservations = new ArrayList<>();
+            }
+
+            // ✅ ZAWSZE dodaj atrybuty do modelu
             model.addAttribute("reservations", reservations);
+            model.addAttribute("hotelDetails", hotelDetails);
+            model.addAttribute("roomDetails", roomDetails);
+
+            System.out.println("DEBUG: Found " + reservations.size() + " reservations");
+            System.out.println("DEBUG: Hotel details size: " + hotelDetails.size());
+            System.out.println("DEBUG: Room details size: " + roomDetails.size());
+
             return "my_reservations";
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("error", "Błąd przy ładowaniu rezerwacji: " + e.getMessage());
-            return "index";
+            model.addAttribute("reservations", new ArrayList<>());
+            model.addAttribute("hotelDetails", new HashMap<>());
+            model.addAttribute("roomDetails", new HashMap<>());
+            return "my_reservations"; // ✅ Nie przekierowuj na index!
         }
     }
+
 
     // ✅ NOWA ZMIANA HASŁA - PRZEZ BAZĘ DANYCH!
     @PostMapping("/profile/update")

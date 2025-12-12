@@ -40,20 +40,6 @@ public class AdminController {
 
 
 
-
-    @GetMapping("/users")
-    public String listUsers(Model model) {
-        try {
-            List<AppUser> users = userService.getAllUsers();
-            model.addAttribute("users", users);
-            model.addAttribute("userRoles", UserRole.values());
-            return "admin/users"; // Szukaj template admin/users.html
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", "Błąd przy ładowaniu użytkowników: " + e.getMessage());
-            return "admin/dashboard";
-        }
-    }
     @Autowired
     private SecurityAuditService auditService;
 
@@ -73,21 +59,28 @@ public class AdminController {
     }
 
     @PostMapping("/users/{id}/toggle-active")
-    public String toggleUserActive(@PathVariable Long id,
-                                   RedirectAttributes redirectAttributes) {
+    public String toggleUserActiveFromAdmin(@PathVariable Long id,
+                                            RedirectAttributes redirectAttributes) {
         try {
             AppUser user = userService.getUserById(id);
+            if (user == null) {
+                redirectAttributes.addFlashAttribute("error", "Użytkownik nie znaleziony");
+                return "redirect:/admin/hotels/users";
+            }
+
             user.setActive(!user.isActive());
             userService.saveUser(user);
 
             String status = user.isActive() ? "aktywowany" : "dezaktywowany";
-            redirectAttributes.addFlashAttribute("message",
-                    "Użytkownik został " + status);
+            redirectAttributes.addFlashAttribute("message", "Użytkownik został " + status);
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
         }
+
         return "redirect:/admin/hotels/users";
     }
+
 
     @PostMapping("/users/{id}/reset-password")
     public String resetUserPassword(@PathVariable Long id,

@@ -3,47 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>Moje Rezerwacje</title>
-  <!-- Bootswatch - motyw Cosmo -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.5.2/cosmo/bootstrap.min.css">
-  <!-- Własne style -->
   <link rel="stylesheet" th:href="@{/css/custom.css}">
 </head>
 <body>
-<!-- Wstawienie wspólnego paska nawigacyjnego -->
 <div th:replace="~{fragments/nav :: nav}"></div>
 
 <div class="container mt-4">
   <h1 class="mb-4">Moje Rezerwacje</h1>
-  <!-- Jeśli masz komunikaty, możesz je tu wyświetlić -->
+
   <div th:if="${message}" class="alert alert-success" role="alert" th:text="${message}"></div>
   <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
 
-  <!-- Karty rezerwacji w siatce -->
-  <div class="row">
+  <!-- ✅ SPRAWDŹ CZY SĄ REZERWACJE -->
+  <div th:if="${#lists.isEmpty(reservations)}">
+    <div class="alert alert-info">
+      <h4>📋 Brak rezerwacji</h4>
+      <p>Nie masz jeszcze żadnych rezerwacji. <a th:href="@{/}">Przejdź do strony głównej</a> żeby zarezerwować pokój!</p>
+    </div>
+  </div>
+
+  <div class="row" th:if="${!#lists.isEmpty(reservations)}">
     <div class="col-md-4 mb-3" th:each="res : ${reservations}" th:if="${res != null}">
       <div class="card h-100">
         <div class="card-body">
           <h5 class="card-title">Rezerwacja nr <span th:text="${res.id}"></span></h5>
           <p class="card-text">
-            <strong>Hotel:</strong> <span th:text="${res.hotelId}"></span><br>
-            <strong>Data przyjazdu:</strong> <span th:text="${res.checkIn}"></span><br>
-            <strong>Data wyjazdu:</strong> <span th:text="${res.checkOut}"></span>
+            <!-- ✅ BEZPIECZNE SPRAWDZANIE NULL -->
+            <strong>Hotel:</strong>
+            <span th:text="${hotelDetails != null and hotelDetails[res.hotelId] != null ? hotelDetails[res.hotelId].name : 'Hotel ID: ' + res.hotelId}"></span><br>
+
+            <strong>Pokój:</strong>
+            <span th:text="${roomDetails != null and roomDetails[res.roomId] != null ? roomDetails[res.roomId].roomNumber + ' - ' + roomDetails[res.roomId].roomType : 'Pokój ID: ' + res.roomId}"></span><br>
+
+            <strong>Data przyjazdu:</strong> <span th:text="${#temporals.format(res.checkIn, 'dd.MM.yyyy')}"></span><br>
+            <strong>Data wyjazdu:</strong> <span th:text="${#temporals.format(res.checkOut, 'dd.MM.yyyy')}"></span><br>
+
+            <!-- ✅ POKAŻ STATUS JEŚLI ISTNIEJE -->
+            <strong th:if="${res.status != null}">Status:</strong>
+            <span th:if="${res.status != null}" th:text="${res.status}" class="badge"
+                  th:classappend="${res.status == 'CANCELLED'} ? 'badge-danger' : (${res.status == 'CONFIRMED'} ? 'badge-success' : 'badge-secondary')"></span>
           </p>
         </div>
         <div class="card-footer">
-          <a class="btn btn-warning btn-sm" th:href="@{'/reservation/edit/' + ${res.id}}">Edytuj</a>
-          <a class="btn btn-danger btn-sm" th:href="@{'/cancelReservation/' + ${res.id}}"
-             onclick="return confirm('Czy na pewno anulować rezerwację?')">Anuluj</a>
+          <!-- ✅ POKAŻ PRZYCISKI TYLKO JEŚLI REZERWACJA NIE JEST ANULOWANA -->
+          <div th:if="${res.status == null or res.status != 'CANCELLED'}">
+            <a class="btn btn-warning btn-sm" th:href="@{'/reservation/edit/' + ${res.id}}">Edytuj</a>
+            <a class="btn btn-danger btn-sm" th:href="@{'/cancelReservation/' + ${res.id}}"
+               onclick="return confirm('Czy na pewno anulować rezerwację?')">Anuluj</a>
+          </div>
+          <div th:if="${res.status == 'CANCELLED'}" class="text-muted">
+            <small>❌ Rezerwacja anulowana</small>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
   <a class="btn btn-secondary mt-3" th:href="@{/}">Powrót do strony głównej</a>
 </div>
 
-<!-- Prosty footer -->
 <footer class="footer mt-4 bg-light text-center">
   <div class="container">
     <span class="text-muted">© 2025 HotelReservation. Wszelkie prawa zastrzeżone.</span>

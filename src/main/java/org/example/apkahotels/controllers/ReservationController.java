@@ -32,7 +32,7 @@ public class ReservationController {
     public List<Reservation> getAllReservations() {
         return reservationService.getAllReservations();
     }
-    @DeleteMapping("/reservations/{id}")
+    @GetMapping("/cancelReservation/{id}")
     public String cancelReservation(@PathVariable Long id) {
         try {
             reservationService.cancelReservation(id);

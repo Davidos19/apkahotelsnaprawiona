@@ -4,6 +4,7 @@ import org.example.apkahotels.models.AppUser;
 import org.example.apkahotels.models.UserRole;
 import org.example.apkahotels.services.SecurityService;
 import org.example.apkahotels.services.UserService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import java.util.List;
 
 @Controller
 @RequestMapping("/admin/users")
+@PreAuthorize("hasRole('ADMIN')")
 public class UserManagementController {
 
     private final UserService userService;
@@ -25,13 +27,16 @@ public class UserManagementController {
 
     @GetMapping
     public String listUsers(Model model) {
-        securityService.checkPermission(UserRole.ADMIN);
-
-        List<AppUser> users = userService.getAllUsers();
-        model.addAttribute("users", users);
-        model.addAttribute("userRoles", UserRole.values());
-
-        return "admin/users";
+        try {
+            List<AppUser> users = userService.getAllUsers();
+            model.addAttribute("users", users);
+            model.addAttribute("userRoles", UserRole.values());
+            return "admin/users"; // Szukaj template admin/users.html
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Błąd przy ładowaniu użytkowników: " + e.getMessage());
+            return "admin/dashboard";
+        }
     }
 
     @PostMapping("/{userId}/role")
@@ -39,7 +44,7 @@ public class UserManagementController {
                                  @RequestParam UserRole newRole,
                                  RedirectAttributes redirectAttributes) {
         try {
-            securityService.checkPermission(UserRole.ADMIN);
+            //  securityService.checkPermission(UserRole.ADMIN);//
             userService.changeUserRole(userId, newRole);
             redirectAttributes.addFlashAttribute("message", "Rola użytkownika została zmieniona!");
         } catch (Exception e) {
@@ -49,17 +54,27 @@ public class UserManagementController {
         return "redirect:/admin/users";
     }
 
-    @PostMapping("/{userId}/toggle-active")
-    public String toggleUserActive(@PathVariable Long userId,
+    @PostMapping("/users/{id}/toggle-active")
+    public String toggleUserActive(@PathVariable Long id,
                                    RedirectAttributes redirectAttributes) {
         try {
-            securityService.checkPermission(UserRole.ADMIN);
-            userService.toggleUserActive(userId);
-            redirectAttributes.addFlashAttribute("message", "Status użytkownika został zmieniony!");
+            AppUser user = userService.getUserById(id);
+            if (user == null) {
+                redirectAttributes.addFlashAttribute("error", "Użytkownik nie znaleziony");
+                return "redirect:/admin/hotels/users"; // ✅ ZMIEŃ NA WŁAŚCIWĄ ŚCIEŻKĘ
+            }
+
+            user.setActive(!user.isActive());
+            userService.saveUser(user);
+
+            String status = user.isActive() ? "aktywowany" : "dezaktywowany";
+            redirectAttributes.addFlashAttribute("message", "Użytkownik został " + status);
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Błąd: " + e.getMessage());
         }
 
-        return "redirect:/admin/users";
+        return "redirect:/admin/hotels/users"; // ✅ ZMIEŃ NA WŁAŚCIWĄ ŚCIEŻKĘ
     }
+
 }
