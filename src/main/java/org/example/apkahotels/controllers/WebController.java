@@ -35,14 +35,16 @@ public class WebController {
     private final ReviewService reviewService;
     private final HotelService hotelService;
     private final RoomService roomService;
+    private final UserService userService;
 
 
     public WebController(HotelService hotelService, ReservationService reservationService,
-                         ReviewService reviewService, RoomService roomService) {
+                         ReviewService reviewService, RoomService roomService, UserService userService) {
         this.hotelService = hotelService;
         this.reservationService = reservationService;
         this.reviewService = reviewService;
         this.roomService = roomService;
+        this.userService = userService;
 
     }
     @Autowired
@@ -115,13 +117,17 @@ public class WebController {
         if (checkInDate != null && checkOutDate != null) {
             hotels = hotelService.getAllHotelsWithAvailability(checkInDate, checkOutDate);
         } else {
-            // Jeśli nie ma dat, pokaż dla dzisiaj + 1 dzień
-            LocalDate today = LocalDate.now();
-            LocalDate tomorrow = today.plusDays(1);
-            hotels = hotelService.getAllHotelsWithAvailability(today, tomorrow);
+            // Jeśli nie ma dat, pokaż wszystkie hotele
+            hotels = hotelService.getAllHotels();
         }
 
+        // ✅ DODAJ POLECANE HOTELE (pierwsze 6 dla sekcji "Popularne hotele")
+        List<Hotel> featuredHotels = hotels.stream()
+                .limit(6)
+                .collect(Collectors.toList());
+
         model.addAttribute("hotels", hotels);
+        model.addAttribute("featuredHotels", featuredHotels); // ✅ DODANE
         model.addAttribute("reservation", new Reservation());
         model.addAttribute("checkIn", checkIn);
         model.addAttribute("checkOut", checkOut);
@@ -129,7 +135,28 @@ public class WebController {
         // Dodaj rezerwacje użytkownika
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         if (!"anonymousUser".equals(username)) {
-            model.addAttribute("reservations", reservationService.getReservationsByUsername(username));
+            List<Reservation> userReservations = reservationService.getReservationsByUsername(username);
+            model.addAttribute("reservations", userReservations);
+
+            // ✅ DODAJ STATYSTYKI UŻYTKOWNIKA
+            model.addAttribute("userStats", reservationService.getReservationStats(username));
+            model.addAttribute("activeReservations", reservationService.getActiveReservationsByUsername(username));
+        }
+
+        // ✅ DODAJ OGÓLNE STATYSTYKI DLA STRONY GŁÓWNEJ
+        try {
+            model.addAttribute("totalHotels", hotels.size());
+            model.addAttribute("totalReservations", reservationService.getTotalReservations());
+
+            // Statystyki dla anonimowych użytkowników
+            model.addAttribute("totalClients", userService.getAllUsers().size());
+
+        } catch (Exception e) {
+            logger.error("Błąd przy ładowaniu statystyk: {}", e.getMessage());
+            // Wartości domyślne
+            model.addAttribute("totalHotels", 0);
+            model.addAttribute("totalReservations", 0);
+            model.addAttribute("totalClients", 0);
         }
 
         return "index";
@@ -272,17 +299,7 @@ public class WebController {
         return "redirect:/";
     }
 
-    @GetMapping("/reservation/edit/{id}")
-    public String editReservation(@PathVariable Long id, Model model) {
-        Reservation reservation = reservationService.getReservationById(id);
-        if (reservation == null) {
-            return "redirect:/";
-        }
-        model.addAttribute("reservation", reservation);
-        List<Room> rooms = roomService.getRoomsByHotelId(reservation.getHotelId());
-        model.addAttribute("rooms", rooms);
-        return "edit_reservation";
-    }
+
 
     @PostMapping("/reservation/update")
     public String updateReservation(@ModelAttribute("reservation") Reservation updatedRes) {
@@ -312,5 +329,62 @@ public class WebController {
             return null;
         }
     }
+
+    @GetMapping("/hotels/{id}/rooms")
+    @ResponseBody
+    public List<Map<String, Object>> getAvailableRoomsForDates(
+            @PathVariable Long id,
+            @RequestParam String checkIn,
+            @RequestParam String checkOut) {
+
+        try {
+            LocalDate checkInDate = LocalDate.parse(checkIn);
+            LocalDate checkOutDate = LocalDate.parse(checkOut);
+
+            // Pobierz wszystkie pokoje hotelu
+            List<Room> allRooms = roomService.getRoomsByHotelId(id);
+
+            // Grupuj pokoje według typu
+            Map<String, List<Room>> roomsByType = allRooms.stream()
+                    .collect(Collectors.groupingBy(Room::getRoomType));
+
+            List<Map<String, Object>> result = new ArrayList<>();
+
+            for (Map.Entry<String, List<Room>> entry : roomsByType.entrySet()) {
+                String roomType = entry.getKey();
+                List<Room> roomsOfType = entry.getValue();
+
+                // Sprawdź dostępność dla tego typu pokoju
+                List<Room> availableRooms = roomService.getAvailableRoomsByTypeAndDates(
+                        id, roomType, roomsOfType.get(0).getCapacity(), checkInDate, checkOutDate);
+
+                if (!availableRooms.isEmpty()) {
+                    Room sampleRoom = roomsOfType.get(0);
+
+                    Map<String, Object> roomInfo = new HashMap<>();
+                    roomInfo.put("type", roomType);
+                    roomInfo.put("capacity", sampleRoom.getCapacity());
+                    roomInfo.put("pricePerNight", sampleRoom.getPrice());
+                    roomInfo.put("availableCount", availableRooms.size());
+                    roomInfo.put("features", "WiFi, Klimatyzacja, TV"); // Domyślne udogodnienia
+
+                    // ✅ POPRAWIONE - bez .doubleValue()
+                    long nights = checkInDate.until(checkOutDate).getDays();
+                    double totalPrice = sampleRoom.getPrice() * nights; // usunięte .doubleValue()
+                    roomInfo.put("totalPrice", totalPrice);
+                    roomInfo.put("nights", nights);
+
+                    result.add(roomInfo);
+                }
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return List.of();
+        }
+    }
+
 
 }

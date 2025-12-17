@@ -2,139 +2,426 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title th:text="${hotel.name} + ' - Szczegóły'">Szczegóły Hotelu</title>
+  <title th:text="${hotel.name}">Hotel</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <link rel="stylesheet" href="/css/custom.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <!-- ✅ DODAJ META TAG DLA CSRF -->
+  <meta name="_csrf" th:content="${_csrf.token}"/>
+  <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
 
+  <style>
+    .hotel-hero {
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1566073771259-6a8506099945') center/cover;
+      height: 300px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .room-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+    .room-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .room-image {
+      height: 200px;
+      background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 3rem;
+    }
+    .price-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #28a745;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-weight: bold;
+    }
+    .features-list {
+      list-style: none;
+      padding: 0;
+    }
+    .features-list li {
+      padding: 2px 0;
+    }
+    .booking-section {
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .date-inputs {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+    .loading-spinner {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
 </head>
 <body>
+<!-- Navigation -->
 <div th:replace="~{fragments/nav :: nav}"></div>
 
-<div class="container mt-4">
-  <!-- Wiadomości -->
-  <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
-    <span th:text="${message}"></span>
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-  </div>
-
-  <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
-    <span th:text="${error}"></span>
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-  </div>
-
-  <!-- Informacje o hotelu -->
-  <div class="row mb-4">
-    <div class="col-md-8">
-      <h1 th:text="${hotel.name}">Nazwa Hotelu</h1>
-      <p><i class="fas fa-map-marker-alt"></i> <span th:text="${hotel.city}">Miasto</span></p>
-      <p th:text="${hotel.description}">Opis hotelu</p>
+<!-- Hotel Hero Section -->
+<div class="hotel-hero">
+  <div>
+    <h1 th:text="${hotel.name}" class="display-4">Hotel Name</h1>
+    <p class="lead">
+      <i class="fas fa-map-marker-alt"></i>
+      <span th:text="${hotel.address}">Hotel Address</span>
+    </p>
+    <!-- Wyświetlanie gwiazdek -->
+    <div th:if="${hotel.stars}">
+                <span class="h4">
+                    <span th:if="${hotel.stars == '1'}">
+                        <i class="fas fa-star text-warning"></i>
+                    </span>
+                    <span th:if="${hotel.stars == '2'}">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </span>
+                    <span th:if="${hotel.stars == '3'}">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </span>
+                    <span th:if="${hotel.stars == '4'}">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </span>
+                    <span th:if="${hotel.stars == '5'}">
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                        <i class="fas fa-star text-warning"></i>
+                    </span>
+                    <span th:text="${hotel.stars}">5</span> gwiazdek
+                </span>
     </div>
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-body text-center">
-          <h5>Dostępność</h5>
-          <div class="alert" th:classappend="${hotel.availableRooms > 0} ? 'alert-success' : 'alert-warning'">
-            <strong>
-              <span th:if="${hotel.availableRooms > 0}">
-                ✅ <span th:text="${hotel.availableRooms}">0</span> dostępnych pokoi
-              </span>
-              <span th:if="${hotel.availableRooms == 0}">
-                ❌ Brak dostępnych pokoi
-              </span>
-            </strong>
-          </div>
-          <small class="text-muted">
-            dla dat: <span th:text="${checkIn}">--</span> - <span th:text="${checkOut}">--</span>
-          </small>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Typy pokoi z dostępnością -->
-  <h3>Dostępne typy pokoi</h3>
-  <div class="row">
-    <div th:each="roomType : ${roomTypesWithAvailability}" class="col-md-6 col-lg-4 mb-4">
-      <div class="card" th:classappend="${roomType.available} ? 'border-success' : 'border-warning'">
-        <img th:if="${roomType.imageUrl}"
-             th:src="${roomType.imageUrl}"
-             class="card-img-top" style="height: 200px; object-fit: cover;"
-             th:alt="${roomType.displayName}">
-
-        <div class="card-body">
-          <h5 class="card-title" th:text="${roomType.displayName}">Typ pokoju</h5>
-
-          <p class="card-text">
-            👥 Pojemność: <span th:text="${roomType.capacity}">2</span> osób<br>
-            💰 Cena: <span th:text="${roomType.price}">299</span> zł/noc<br>
-            🏨 Pokoi tego typu: <span th:text="${roomType.totalRooms}">5</span>
-          </p>
-
-          <!-- Status dostępności -->
-          <div class="mb-3">
-            <span th:if="${roomType.available}" class="badge badge-success">
-              ✅ Dostępnych: <span th:text="${roomType.availableCount}">3</span>
-            </span>
-            <span th:if="${!roomType.available}" class="badge badge-warning">
-              ❌ Wszystkie zajęte
-            </span>
-          </div>
-
-          <!-- Formularz rezerwacji (tylko dla dostępnych typów) -->
-          <div th:if="${roomType.available}">
-            <form action="/reservation" method="post">
-              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-
-              <input type="hidden" name="hotelId" th:value="${hotel.id}">
-              <!-- Przekaż typ i pojemność zamiast konkretnego roomId -->
-              <input type="hidden" name="roomType" th:value="${roomType.roomType}">
-              <input type="hidden" name="capacity" th:value="${roomType.capacity}">
-              <input type="hidden" name="checkIn" th:value="${checkIn}">
-              <input type="hidden" name="checkOut" th:value="${checkOut}">
-
-              <button type="submit" class="btn btn-success btn-block">
-                🏨 Zarezerwuj za <span th:text="${roomType.price}">299</span> zł/noc
-              </button>
-            </form>
-          </div>
-
-          <div th:if="${!roomType.available}">
-            <button class="btn btn-secondary btn-block" disabled>
-              Niedostępny w wybranych datach
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recenzje -->
-  <div th:if="${reviews != null and !reviews.empty}" class="mt-5">
-    <h3>Recenzje gości</h3>
-    <div th:each="review : ${reviews}" class="card mb-3">
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <h6 class="card-title" th:text="${review.username}">Użytkownik</h6>
-          <div>
-            <span th:each="star : ${#numbers.sequence(1, review.rating)}">⭐</span>
-            <small class="text-muted" th:text="${#temporals.format(review.createdAt, 'dd-MM-yyyy HH:mm')}">Data</small>
-          </div>
-        </div>
-        <p class="card-text" th:text="${review.comment}">Komentarz</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Powrót do listy hoteli -->
-  <div class="mt-4">
-    <a th:href="@{/(checkIn=${checkIn}, checkOut=${checkOut})}" class="btn btn-outline-primary">
-      ← Powrót do listy hoteli
-    </a>
   </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<div class="container mt-4">
+  <!-- Booking Section -->
+  <div class="booking-section">
+    <h3><i class="fas fa-calendar-check"></i> Zarezerwuj Pobyt</h3>
+
+    <div class="date-inputs">
+      <div class="form-group flex-fill">
+        <label for="checkIn">Data Przyjazdu</label>
+        <input type="date" id="checkIn" class="form-control"
+               th:value="${checkIn}" min="" required>
+      </div>
+      <div class="form-group flex-fill">
+        <label for="checkOut">Data Wyjazdu</label>
+        <input type="date" id="checkOut" class="form-control"
+               th:value="${checkOut}" min="" required>
+      </div>
+      <div class="form-group d-flex align-items-end">
+        <button type="button" id="searchRooms" class="btn btn-primary btn-lg">
+          <i class="fas fa-search"></i> Wyszukaj Pokoje
+        </button>
+      </div>
+    </div>
+
+    <div id="dateError" class="alert alert-danger" style="display: none;">
+      Proszę wybrać poprawne daty pobytu.
+    </div>
+  </div>
+
+  <!-- Loading Spinner -->
+  <div class="loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+      <span class="sr-only">Ładowanie...</span>
+    </div>
+    <p>Wyszukiwanie dostępnych pokoi...</p>
+  </div>
+
+  <!-- Available Rooms -->
+  <div id="roomsContainer" style="display: none;">
+    <h3><i class="fas fa-bed"></i> Dostępne Pokoje</h3>
+    <div id="roomsList" class="row">
+      <!-- Pokoje będą ładowane przez JavaScript -->
+    </div>
+  </div>
+
+  <!-- Hotel Description -->
+  <div class="row mt-5">
+    <div class="col-md-8">
+      <h3>Opis Hotelu</h3>
+      <p th:text="${hotel.description ?: 'Brak opisu hotelu.'}">
+        Hotel description goes here...
+      </p>
+
+      <!-- Reviews Section -->
+      <div th:if="${reviews != null and !reviews.empty}">
+        <h4 class="mt-4">Opinie Gości</h4>
+        <div th:each="review : ${reviews}" class="card mb-3">
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <h6 class="card-title" th:text="${review.username}">Username</h6>
+              <small th:text="${#temporals.format(review.createdAt, 'dd.MM.yyyy')}">Date</small>
+            </div>
+            <div class="mb-2">
+                                <span th:each="i : ${#numbers.sequence(1, review.rating)}">
+                                    <i class="fas fa-star text-warning"></i>
+                                </span>
+              <span th:text="'(' + ${review.rating} + '/5)'"></span>
+            </div>
+            <p class="card-text" th:text="${review.comment}">Review comment</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          <h5><i class="fas fa-info-circle"></i> Informacje</h5>
+        </div>
+        <div class="card-body">
+          <p><strong>Adres:</strong><br>
+            <span th:text="${hotel.address}">Address</span></p>
+          <p><strong>Miasto:</strong><br>
+            <span th:text="${hotel.city}">City</span></p>
+          <p><strong>Telefon:</strong><br>
+            <span th:text="${hotel.phoneNumber ?: 'Brak informacji'}">Phone</span></p>
+          <p><strong>Email:</strong><br>
+            <span th:text="${hotel.email ?: 'Brak informacji'}">Email</span></p>
+          <div th:if="${hotel.stars}">
+            <p><strong>Kategoria:</strong><br>
+              <span th:text="${hotel.stars} + ' gwiazdek'">Stars</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reservation Modal -->
+<div class="modal fade" id="reservationModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Potwierdź Rezerwację</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <form action="/reservation" method="post" id="reservationForm">
+        <!-- ✅ TOKEN CSRF BĘDZIE DODANY PRZEZ JAVASCRIPT -->
+        <div class="modal-body">
+          <input type="hidden" name="hotelId" th:value="${hotel.id}">
+          <input type="hidden" id="modalRoomType" name="roomType">
+          <input type="hidden" id="modalCapacity" name="capacity">
+          <input type="hidden" id="modalCheckIn" name="checkIn">
+          <input type="hidden" id="modalCheckOut" name="checkOut">
+
+          <div id="reservationSummary">
+            <!-- Podsumowanie rezerwacji -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-check"></i> Potwierdź Rezerwację
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  $(document).ready(function() {
+    // ✅ POBIERZ CSRF TOKEN
+    const token = $("meta[name='_csrf']").attr("content");
+    const header = $("meta[name='_csrf_header']").attr("content");
+
+    // ✅ DODAJ CSRF TOKEN DO WSZYSTKICH ŻĄDAŃ AJAX
+    $(document).ajaxSend(function(e, xhr, options) {
+      xhr.setRequestHeader(header, token);
+    });
+
+    // ✅ DODAJ CSRF TOKEN DO FORMULARZA
+    $('#reservationForm').append('<input type="hidden" name="' + $("meta[name='_csrf']").attr("content").split('=')[0] + '" value="' + token + '">');
+
+    // Ustaw minimalne daty
+    const today = new Date().toISOString().split('T')[0];
+    $('#checkIn').attr('min', today);
+
+    // Automatyczne ustawienie minimalnej daty wyjazdu
+    $('#checkIn').change(function() {
+      const checkInDate = $(this).val();
+      if (checkInDate) {
+        const minCheckOut = new Date(checkInDate);
+        minCheckOut.setDate(minCheckOut.getDate() + 1);
+        $('#checkOut').attr('min', minCheckOut.toISOString().split('T')[0]);
+
+        // Wyczyść datę wyjazdu jeśli jest wcześniejsza
+        const checkOutDate = $('#checkOut').val();
+        if (checkOutDate && checkOutDate <= checkInDate) {
+          $('#checkOut').val('');
+        }
+      }
+    });
+
+    // Wyszukiwanie pokoi
+    $('#searchRooms').click(function() {
+      const checkIn = $('#checkIn').val();
+      const checkOut = $('#checkOut').val();
+
+      if (!checkIn || !checkOut) {
+        $('#dateError').text('Proszę wybrać daty pobytu.').show();
+        return;
+      }
+
+      if (checkIn >= checkOut) {
+        $('#dateError').text('Data wyjazdu musi być późniejsza niż data przyjazdu.').show();
+        return;
+      }
+
+      $('#dateError').hide();
+      $('.loading-spinner').show();
+      $('#roomsContainer').hide();
+
+      // Wywołaj API
+      $.get(`/hotels/${[[${hotel.id}]]}/rooms`, {
+        checkIn: checkIn,
+        checkOut: checkOut
+      })
+              .done(function(rooms) {
+                displayRooms(rooms, checkIn, checkOut);
+              })
+              .fail(function() {
+                alert('Błąd podczas wyszukiwania pokoi. Spróbuj ponownie.');
+              })
+              .always(function() {
+                $('.loading-spinner').hide();
+              });
+    });
+
+    // Funkcja wyświetlania pokoi
+    function displayRooms(rooms, checkIn, checkOut) {
+      const roomsList = $('#roomsList');
+      roomsList.empty();
+
+      if (rooms.length === 0) {
+        roomsList.html(`
+                    <div class="col-12">
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle"></i>
+                            Brak dostępnych pokoi w wybranych datach.
+                        </div>
+                    </div>
+                `);
+      } else {
+        rooms.forEach(function(room) {
+          const roomCard = createRoomCard(room, checkIn, checkOut);
+          roomsList.append(roomCard);
+        });
+      }
+
+      $('#roomsContainer').show();
+    }
+
+    // Funkcja tworzenia karty pokoju
+    function createRoomCard(room, checkIn, checkOut) {
+      const features = room.features ? room.features.split(',').map(f => `<li><i class="fas fa-check text-success"></i> ${f.trim()}</li>`).join('') : '';
+
+      return `
+                <div class="col-md-6">
+                    <div class="room-card">
+                        <div class="room-image">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div class="price-badge">
+                            ${room.pricePerNight} zł/noc
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">${room.type}</h5>
+                            <p class="text-muted">
+                                <i class="fas fa-users"></i> Do ${room.capacity} osób
+                                <span class="ml-3"><i class="fas fa-door-open"></i> ${room.availableCount} dostępnych</span>
+                            </p>
+                            ${features ? `<ul class="features-list">${features}</ul>` : ''}
+
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <small class="text-muted">${room.nights} nocy</small><br>
+                                    <strong class="h5 text-success">${room.totalPrice.toFixed(2)} zł</strong><br>
+                                    <small>Cena całkowita</small>
+                                </div>
+                                <div class="col-6 text-right">
+                                    <button class="btn btn-primary reserve-btn"
+                                            data-room-type="${room.type}"
+                                            data-capacity="${room.capacity}"
+                                            data-price="${room.totalPrice}"
+                                            data-nights="${room.nights}"
+                                            data-price-per-night="${room.pricePerNight}">
+                                        <i class="fas fa-calendar-plus"></i> Rezerwuj
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+    }
+
+    // Obsługa rezerwacji
+    $(document).on('click', '.reserve-btn', function() {
+      const roomType = $(this).data('room-type');
+      const capacity = $(this).data('capacity');
+      const totalPrice = $(this).data('price');
+      const nights = $(this).data('nights');
+      const pricePerNight = $(this).data('price-per-night');
+      const checkIn = $('#checkIn').val();
+      const checkOut = $('#checkOut').val();
+
+      // Wypełnij modal
+      $('#modalRoomType').val(roomType);
+      $('#modalCapacity').val(capacity);
+      $('#modalCheckIn').val(checkIn);
+      $('#modalCheckOut').val(checkOut);
+
+      $('#reservationSummary').html(`
+                <h6>Podsumowanie Rezerwacji</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Hotel:</strong></td><td>[[${hotel.name}]]</td></tr>
+                    <tr><td><strong>Typ pokoju:</strong></td><td>${roomType}</td></tr>
+                    <tr><td><strong>Dla:</strong></td><td>${capacity} osób</td></tr>
+                    <tr><td><strong>Data przyjazdu:</strong></td><td>${checkIn}</td></tr>
+                    <tr><td><strong>Data wyjazdu:</strong></td><td>${checkOut}</td></tr>
+                    <tr><td><strong>Liczba nocy:</strong></td><td>${nights}</td></tr>
+                    <tr><td><strong>Cena za noc:</strong></td><td>${pricePerNight} zł</td></tr>
+                    <tr class="table-success"><td><strong>Cena całkowita:</strong></td><td><strong>${totalPrice.toFixed(2)} zł</strong></td></tr>
+                </table>
+            `);
+
+      $('#reservationModal').modal('show');
+    });
+  });
+</script>
 </body>
 </html>

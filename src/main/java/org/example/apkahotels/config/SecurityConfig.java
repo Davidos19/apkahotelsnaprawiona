@@ -30,6 +30,9 @@ public class SecurityConfig {
                                 "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .requestMatchers("/h2-console/**").permitAll() // H2 Console
 
+                        // ✅ DODAJ ŚCIEŻKĘ REZERWACJI
+                        .requestMatchers("/reservation").authenticated()
+
                         // ✅ TYLKO ADMIN - zarządzanie użytkownikami i systemem
                         .requestMatchers("/admin/users/**", "/admin/system/**").hasRole("ADMIN")
 
@@ -45,7 +48,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // ✅ Zalogowani użytkownicy
-                        .requestMatchers("/profile/**", "/reservations/**", "/my-reservations/**").authenticated()
+                        .requestMatchers("/profile/**", "/reservations/**", "/my-reservations/**", "/reservation/**"
+                        ).authenticated()
 
                         .anyRequest().authenticated()
                 )
@@ -89,6 +93,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/h2-console/**")
                         .ignoringRequestMatchers(new AntPathRequestMatcher("/h2-console/**"))
+                        .ignoringRequestMatchers("/reservation")
+
                 )
 
                 .rememberMe(remember -> remember
