@@ -8,6 +8,9 @@ import org.example.apkahotels.models.Room;
 import org.example.apkahotels.repositories.HotelRepository;
 import org.example.apkahotels.repositories.ReservationRepository;
 import org.example.apkahotels.repositories.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -19,9 +22,13 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 @Transactional
 public class ReservationService {
+    private static final Logger logger = LoggerFactory.getLogger(ReservationService.class);
 
     private final HotelRepository hotelRepository;
     private final ReservationRepository reservationRepository;
@@ -317,4 +324,49 @@ public class ReservationService {
         }
         return List.of();
     }
+    public Page<Reservation> getFilteredReservations(Pageable pageable, String status, Long hotelId, String username) {
+        try {
+            // Pobierz wszystkie rezerwacje
+            List<Reservation> allReservations = reservationRepository.findAll();
+
+            // Filtrowanie z ulepszonym wyszukiwaniem użytkowników
+            List<Reservation> filteredReservations = allReservations.stream()
+                    .filter(r -> status == null || status.isEmpty() || status.equals(r.getStatus()))
+                    .filter(r -> hotelId == null || hotelId.equals(r.getHotelId()))
+                    .filter(r -> {
+                        if (username == null || username.isEmpty()) {
+                            return true;
+                        }
+                        // ✅ ULEPSZONE WYSZUKIWANIE - częściowe dopasowanie (case-insensitive)
+                        return r.getUsername() != null &&
+                                r.getUsername().toLowerCase().contains(username.toLowerCase());
+                    })
+                    .sorted((r1, r2) -> {
+                        if (pageable.getSort().isSorted()) {
+                            return r2.getCheckIn().compareTo(r1.getCheckIn());
+                        }
+                        return 0;
+                    })
+                    .collect(Collectors.toList());
+
+            // Implementacja stronicowania
+            int start = (int) pageable.getOffset();
+            int end = Math.min(start + pageable.getPageSize(), filteredReservations.size());
+
+            if (start > filteredReservations.size()) {
+                return new PageImpl<>(List.of(), pageable, filteredReservations.size());
+            }
+
+            List<Reservation> pageContent = filteredReservations.subList(start, end);
+
+            return new PageImpl<>(pageContent, pageable, filteredReservations.size());
+
+        } catch (Exception e) {
+            logger.error("Błąd podczas filtrowania rezerwacji: {}", e.getMessage());
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+    }
+
+
+
 }

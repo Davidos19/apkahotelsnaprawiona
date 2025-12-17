@@ -11,6 +11,7 @@
 <div class="container mt-4">
   <h1>Edycja Profilu</h1>
   <form th:action="@{/profile/save}" th:object="${user}" method="post">
+    <input type="hidden" th:field="*{id}" />
     <div class="form-group">
       <label for="username">Nazwa użytkownika:</label>
       <!-- Pole to tylko do wyświetlania, nie edytowalne -->

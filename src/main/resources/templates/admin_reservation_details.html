@@ -1,0 +1,237 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Szczegóły Rezerwacji</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    .detail-card { margin-bottom: 20px; }
+    .status-badge { font-size: 1.2em; }
+    .contact-info i { width: 20px; }
+    .timeline-item {
+      border-left: 3px solid #007bff;
+      padding-left: 20px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+<div th:replace="~{fragments/admin_nav :: admin_nav}"></div>
+
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-calendar-check"></i> Szczegóły Rezerwacji #<span th:text="${reservation.id}"></span></h1>
+        <div>
+          <a th:href="@{'/admin/reservations/' + ${reservation.id} + '/edit'}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edytuj
+          </a>
+          <a th:href="@{/admin/reservations}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Powrót
+          </a>
+        </div>
+      </div>
+
+      <!-- Komunikaty -->
+      <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${message}"></span>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+      <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+
+      <div class="row">
+        <!-- Główne informacje o rezerwacji -->
+        <div class="col-lg-8">
+          <div class="card detail-card">
+            <div class="card-header bg-primary text-white">
+              <h5><i class="fas fa-info-circle"></i> Informacje o Rezerwacji</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <p><strong><i class="fas fa-hashtag"></i> ID Rezerwacji:</strong> <span th:text="${reservation.id}"></span></p>
+                  <p><strong><i class="fas fa-calendar-alt"></i> Data Przyjazdu:</strong>
+                    <span th:text="${#temporals.format(reservation.checkIn, 'dd MMMM yyyy (EEEE)')}"></span></p>
+                  <p><strong><i class="fas fa-calendar-alt"></i> Data Wyjazdu:</strong>
+                    <span th:text="${#temporals.format(reservation.checkOut, 'dd MMMM yyyy (EEEE)')}"></span></p>
+                  <p><strong><i class="fas fa-clock"></i> Długość Pobytu:</strong>
+                    <span th:text="${T(java.time.temporal.ChronoUnit).DAYS.between(reservation.checkIn, reservation.checkOut)} + ' dni'"></span></p>
+                </div>
+                <div class="col-md-6">
+                  <p><strong><i class="fas fa-tag"></i> Status:</strong>
+                    <span class="badge status-badge"
+                          th:classappend="${reservation.status == 'CONFIRMED'} ? 'badge-success' :
+                                                            (${reservation.status == 'CANCELLED'} ? 'badge-danger' :
+                                                            (${reservation.status == 'PENDING'} ? 'badge-warning' : 'badge-info'))"
+                          th:text="${reservation.status}"></span></p>
+                  <p th:if="${reservation.totalPrice != null}">
+                    <strong><i class="fas fa-money-bill"></i> Cena Całkowita:</strong>
+                    <span class="text-success font-weight-bold" th:text="${reservation.totalPrice} + ' zł'"></span></p>
+                  <p th:if="${reservation.createdAt != null}">
+                    <strong><i class="fas fa-calendar-plus"></i> Data Utworzenia:</strong>
+                    <span th:text="${#temporals.format(reservation.createdAt, 'dd.MM.yyyy HH:mm')}"></span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Informacje o hotelu -->
+          <div class="card detail-card" th:if="${hotel != null}">
+            <div class="card-header bg-info text-white">
+              <h5><i class="fas fa-hotel"></i> Hotel</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-8">
+                  <h4 th:text="${hotel.name}"></h4>
+                  <p th:if="${hotel.address}" class="text-muted">
+                    <i class="fas fa-map-marker-alt"></i> <span th:text="${hotel.address}"></span></p>
+                  <p th:if="${hotel.city}" class="text-muted">
+                    <i class="fas fa-city"></i> <span th:text="${hotel.city}"></span></p>
+                  <p th:if="${hotel.description}" th:text="${hotel.description}"></p>
+                </div>
+                <div class="col-md-4 text-right">
+                  <p th:if="${hotel.phoneNumber}">
+                    <i class="fas fa-phone"></i> <span th:text="${hotel.phoneNumber}"></span></p>
+                  <p th:if="${hotel.email}">
+                    <i class="fas fa-envelope"></i> <span th:text="${hotel.email}"></span></p>
+                  <p th:if="${hotel.stars}">
+                    <i class="fas fa-star"></i> <span th:text="${hotel.stars} + ' gwiazdek'"></span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ POPRAWIONA SEKCJA POKOJU - BEZ description -->
+          <div class="card detail-card" th:if="${room != null}">
+            <div class="card-header bg-success text-white">
+              <h5><i class="fas fa-bed"></i> Pokój</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5>Pokój nr <span th:text="${room.roomNumber}"></span></h5>
+                  <p><strong>Typ:</strong> <span th:text="${room.roomType}"></span></p>
+                  <!-- ✅ USUNIĘTO room.description - tego pola nie ma w modelu -->
+                </div>
+                <div class="col-md-6">
+                  <p th:if="${room.capacity}"><strong>Maksymalna liczba gości:</strong> <span th:text="${room.capacity}"></span></p>
+                  <p th:if="${room.price}"><strong>Cena za noc:</strong>
+                    <span class="text-success" th:text="${room.price} + ' zł'"></span></p>
+                  <!-- ✅ DODANO WYŚWIETLANIE ID POKOJU -->
+                  <p><strong>ID Pokoju:</strong> <span class="text-muted" th:text="${room.id}"></span></p>
+                </div>
+              </div>
+              <!-- ✅ DODANO INFORMACJE O ZDJĘCIU POKOJU -->
+              <div class="row mt-3" th:if="${room.imageUrl}">
+                <div class="col-12">
+                  <p><strong>Zdjęcie pokoju:</strong></p>
+                  <img th:src="${room.imageUrl}" alt="Zdjęcie pokoju" class="img-thumbnail" style="max-width: 200px;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informacje o gościu -->
+        <div class="col-lg-4">
+          <div class="card detail-card">
+            <div class="card-header bg-warning text-white">
+              <h5><i class="fas fa-user"></i> Informacje o Gościu</h5>
+            </div>
+            <div class="card-body">
+              <div th:if="${user != null}">
+                <div class="text-center mb-3">
+                  <i class="fas fa-user-circle fa-3x text-secondary"></i>
+                </div>
+                <h5 class="text-center" th:text="${user.firstName} + ' ' + ${user.lastName}"></h5>
+                <hr>
+                <div class="contact-info">
+                  <p><i class="fas fa-user"></i> <strong>Login:</strong> <span th:text="${user.username}"></span></p>
+                  <p><i class="fas fa-envelope"></i> <strong>Email:</strong>
+                    <a th:href="'mailto:' + ${user.email}" th:text="${user.email}"></a></p>
+                  <p th:if="${user.phoneNumber}">
+                    <i class="fas fa-phone"></i> <strong>Telefon:</strong>
+                    <a th:href="'tel:' + ${user.phoneNumber}" th:text="${user.phoneNumber}"></a></p>
+                  <p><i class="fas fa-user-tag"></i> <strong>Rola:</strong>
+                    <span class="badge badge-secondary" th:text="${user.role}"></span></p>
+                  <p th:if="${user.createdAt}">
+                    <i class="fas fa-calendar-plus"></i> <strong>Zarejestrowany:</strong>
+                    <span th:text="${#temporals.format(user.createdAt, 'dd.MM.yyyy')}"></span></p>
+                </div>
+              </div>
+              <div th:if="${user == null}">
+                <p class="text-muted">Informacje o użytkowniku niedostępne.</p>
+                <p><strong>Username:</strong> <span th:text="${reservation.username}"></span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ DODANO SZCZEGÓŁY TECHNICZNE -->
+          <div class="card detail-card">
+            <div class="card-header bg-dark text-white">
+              <h6><i class="fas fa-info"></i> Szczegóły Techniczne</h6>
+            </div>
+            <div class="card-body">
+              <small>
+                <p><strong>ID Hotelu:</strong> <span th:text="${reservation.hotelId}"></span></p>
+                <p><strong>ID Pokoju:</strong> <span th:text="${reservation.roomId}"></span></p>
+                <p><strong>ID Rezerwacji:</strong> <span th:text="${reservation.id}"></span></p>
+                <p th:if="${reservation.createdAt}">
+                  <strong>Utworzona:</strong><br>
+                  <span th:text="${#temporals.format(reservation.createdAt, 'dd.MM.yyyy HH:mm:ss')}"></span>
+                </p>
+              </small>
+            </div>
+          </div>
+
+          <!-- Akcje -->
+          <div class="card">
+            <div class="card-header bg-secondary text-white">
+              <h5><i class="fas fa-cogs"></i> Akcje</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                <a th:href="@{'/admin/reservations/' + ${reservation.id} + '/edit'}"
+                   class="btn btn-warning btn-block mb-2">
+                  <i class="fas fa-edit"></i> Edytuj Rezerwację
+                </a>
+
+                <form th:if="${reservation.status != 'CANCELLED'}"
+                      th:action="@{'/admin/reservations/' + ${reservation.id} + '/cancel'}"
+                      method="post" class="mb-2">
+                  <button type="submit" class="btn btn-danger btn-block"
+                          onclick="return confirm('Czy na pewno anulować tę rezerwację?')">
+                    <i class="fas fa-times"></i> Anuluj Rezerwację
+                  </button>
+                </form>
+
+                <a th:href="@{'/admin/reservations/hotel/' + ${reservation.hotelId}}"
+                   class="btn btn-info btn-block mb-2">
+                  <i class="fas fa-hotel"></i> Wszystkie Rezerwacje Hotelu
+                </a>
+
+                <a th:href="@{'/admin/reservations?username=' + ${reservation.username}}"
+                   class="btn btn-outline-primary btn-block">
+                  <i class="fas fa-user"></i> Rezerwacje Użytkownika
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

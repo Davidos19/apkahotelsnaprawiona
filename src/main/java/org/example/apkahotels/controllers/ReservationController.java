@@ -1,5 +1,6 @@
 package org.example.apkahotels.controllers;
 
+import org.example.apkahotels.dto.RoomTypeStatsDTO;
 import org.example.apkahotels.models.Hotel;
 import org.example.apkahotels.models.Reservation;
 import org.example.apkahotels.models.Room;
@@ -78,6 +79,7 @@ public class ReservationController {
 
         return "edit_reservation"; // widok edycji rezerwacji
     }
+
 
 
 

@@ -29,9 +29,24 @@ public class SecurityConfig {
                         .requestMatchers("/", "/login", "/register", "/hotels/**", "/hotel/**",
                                 "/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                         .requestMatchers("/h2-console/**").permitAll() // H2 Console
+
+                        // ✅ TYLKO ADMIN - zarządzanie użytkownikami i systemem
+                        .requestMatchers("/admin/users/**", "/admin/system/**").hasRole("ADMIN")
+
+                        // ✅ ADMIN + HOTEL_MANAGER - zarządzanie hotelami i pokojami
+                        .requestMatchers("/admin/hotels/**", "/admin/rooms/**").hasAnyRole("ADMIN", "HOTEL_MANAGER")
+
+                        // ✅ ADMIN + HOTEL_MANAGER + RECEPTIONIST - zarządzanie rezerwacjami
+                        .requestMatchers("/admin/reservations/**").hasAnyRole("ADMIN", "HOTEL_MANAGER", "RECEPTIONIST")
+                        .requestMatchers("/admin/calendar/**").hasAnyRole("ADMIN", "HOTEL_MANAGER", "RECEPTIONIST")
+
+                        // ✅ Pozostałe zasoby admin tylko dla ADMIN
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // ✅ Zalogowani użytkownicy
                         .requestMatchers("/profile/**", "/reservations/**", "/my-reservations/**").authenticated()
+
                         .anyRequest().authenticated()
                 )
 

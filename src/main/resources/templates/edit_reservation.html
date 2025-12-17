@@ -2,55 +2,258 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <title>Edycja Rezerwacji</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootswatch/4.5.2/cerulean/bootstrap.min.css">
+  <title>Edytuj Rezerwację</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    .form-section {
+      border: 1px solid #dee2e6;
+      border-radius: 0.25rem;
+      padding: 20px;
+      margin-bottom: 20px;
+      background-color: #f8f9fa;
+    }
+    .form-section h5 {
+      color: #495057;
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+    .required { color: red; }
+    .current-info {
+      background-color: #e7f3ff;
+      border: 1px solid #b8daff;
+      border-radius: 0.25rem;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
-<div th:replace="~{fragments/nav :: nav}"></div>
-<div class="container mt-4">
-  <h1>Edycja Rezerwacji</h1>
-  <form th:action="@{/reservation/update}" th:object="${reservation}" method="post">
-    <!-- Ukryte pole z ID rezerwacji -->
-    <input type="hidden" th:field="*{id}" />
+<div th:replace="~{fragments/admin_nav :: admin_nav}"></div>
 
-    <!-- Pole wyboru hotelu (opcjonalnie, jeśli chcesz umożliwić zmianę hotelu) -->
-    <!-- Jeśli hotel nie powinien być edytowalny, możesz wyświetlić tylko informację -->
-    <div class="form-group">
-      <label>Hotel:</label>
-      <p class="form-control-plaintext" th:text="${hotel != null ? hotel.name : 'Brak danych'}">Brak danych</p>
-
-    </div>
-
-
-    <!-- Dropdown wyboru pokoju -->
-    <div class="form-group">
-      <label for="roomSelect">Pokój:</label>
-      <select id="roomSelect" th:field="*{roomId}" class="form-control" required>
-        <option value="" disabled>-- Wybierz pokój --</option>
-        <option th:each="room : ${rooms}"
-                th:value="${room.id}"
-                th:text="${room.roomNumber} + ' - ' + ${room.roomType}">
-        </option>
-      </select>
-    </div>
-
-    <!-- Sekcja dat -->
-    <div class="form-row">
-      <div class="form-group col-md-6">
-        <label for="checkIn">Data przyjazdu:</label>
-        <input type="date" id="checkIn" th:field="*{checkIn}" class="form-control" required/>
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-edit"></i> Edytuj Rezerwację #<span th:text="${reservation.id}"></span></h1>
+        <div>
+          <a th:href="@{'/admin/reservations/' + ${reservation.id}}" class="btn btn-info">
+            <i class="fas fa-eye"></i> Szczegóły
+          </a>
+          <a th:href="@{/admin/reservations}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Powrót
+          </a>
+        </div>
       </div>
-      <div class="form-group col-md-6">
-        <label for="checkOut">Data wyjazdu:</label>
-        <input type="date" id="checkOut" th:field="*{checkOut}" class="form-control" required/>
-      </div>
-    </div>
 
-    <div class="d-flex justify-content-between">
-      <button type="submit" class="btn btn-success">Zapisz zmiany</button>
-      <a class="btn btn-secondary" th:href="@{/}">Anuluj</a>
+      <!-- Komunikaty -->
+      <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${message}"></span>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+      <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+
+      <form th:action="@{'/admin/reservations/' + ${reservation.id} + '/update'}"
+            th:object="${reservation}" method="post">
+
+        <div class="row">
+          <div class="col-lg-8">
+            <!-- Informacje podstawowe -->
+            <div class="form-section">
+              <h5><i class="fas fa-info-circle"></i> Podstawowe Informacje</h5>
+
+              <div class="current-info">
+                <strong>Aktualne informacje:</strong><br>
+                Gość: <span th:text="${reservation.username}"></span><br>
+                Status: <span class="badge"
+                              th:classappend="${reservation.status == 'CONFIRMED'} ? 'badge-success' :
+                                                             (${reservation.status == 'CANCELLED'} ? 'badge-danger' :
+                                                             (${reservation.status == 'PENDING'} ? 'badge-warning' : 'badge-info'))"
+                              th:text="${reservation.status}"></span>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="status"><i class="fas fa-tag"></i> Status <span class="required">*</span></label>
+                    <select th:field="*{status}" id="status" class="form-control" required>
+                      <option value="PENDING">PENDING - Oczekująca</option>
+                      <option value="CONFIRMED">CONFIRMED - Potwierdzona</option>
+                      <option value="CANCELLED">CANCELLED - Anulowana</option>
+                      <option value="COMPLETED">COMPLETED - Zakończona</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="totalPrice"><i class="fas fa-money-bill"></i> Cena Całkowita (zł)</label>
+                    <input type="number" th:field="*{totalPrice}" id="totalPrice"
+                           class="form-control" step="0.01" min="0">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daty -->
+            <div class="form-section">
+              <h5><i class="fas fa-calendar-alt"></i> Daty Pobytu</h5>
+
+              <div class="current-info">
+                <strong>Aktualne daty:</strong><br>
+                Przyjazd: <span th:text="${#temporals.format(reservation.checkIn, 'dd.MM.yyyy')}"></span><br>
+                Wyjazd: <span th:text="${#temporals.format(reservation.checkOut, 'dd.MM.yyyy')}"></span>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="checkIn"><i class="fas fa-calendar-plus"></i> Data Przyjazdu <span class="required">*</span></label>
+                    <input type="date" th:field="*{checkIn}" id="checkIn"
+                           class="form-control" required>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="checkOut"><i class="fas fa-calendar-minus"></i> Data Wyjazdu <span class="required">*</span></label>
+                    <input type="date" th:field="*{checkOut}" id="checkOut"
+                           class="form-control" required>
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Uwaga:</strong> Zmiana dat może wpłynąć na dostępność pokoju i cenę rezerwacji.
+              </div>
+            </div>
+
+            <!-- Hotel i Pokój -->
+            <div class="form-section">
+              <h5><i class="fas fa-hotel"></i> Hotel i Pokój</h5>
+
+              <div class="current-info" th:if="${hotels != null and rooms != null}">
+                <strong>Aktualny wybór:</strong><br>
+                Hotel: <span th:each="h : ${hotels}" th:if="${h.id == reservation.hotelId}" th:text="${h.name}"></span><br>
+                Pokój: <span th:each="r : ${rooms}" th:if="${r.id == reservation.roomId}" th:text="${r.roomNumber} + ' - ' + ${r.roomType}"></span>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="hotelId"><i class="fas fa-building"></i> Hotel <span class="required">*</span></label>
+                    <select th:field="*{hotelId}" id="hotelId" class="form-control" required
+                            onchange="loadRoomsForHotel(this.value)">
+                      <option value="">-- Wybierz hotel --</option>
+                      <option th:each="hotel : ${hotels}"
+                              th:value="${hotel.id}"
+                              th:text="${hotel.name + ' (' + hotel.address + ')'}"></option>
+                    </select>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label for="roomId"><i class="fas fa-bed"></i> Pokój <span class="required">*</span></label>
+                    <select th:field="*{roomId}" id="roomId" class="form-control" required>
+                      <option value="">-- Wybierz pokój --</option>
+                      <option th:each="room : ${rooms}"
+                              th:value="${room.id}"
+                              th:text="${room.roomNumber} + ' - ' + ${room.roomType} + ' (' + ${room.price} + ' zł/noc)'"></option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+          <!-- Panel boczny -->
+          <div class="col-lg-4">
+            <!-- Informacje o gościu -->
+            <div class="card mb-4">
+              <div class="card-header bg-info text-white">
+                <h6><i class="fas fa-user"></i> Informacje o Gościu</h6>
+              </div>
+              <div class="card-body">
+                <p><strong>Username:</strong> <span th:text="${reservation.username}"></span></p>
+                <p><strong>ID Rezerwacji:</strong> <span th:text="${reservation.id}"></span></p>
+                <p th:if="${reservation.createdAt}"><strong>Utworzona:</strong>
+                  <span th:text="${#temporals.format(reservation.createdAt, 'dd.MM.yyyy HH:mm')}"></span></p>
+              </div>
+            </div>
+
+            <!-- Akcje -->
+            <div class="card">
+              <div class="card-header bg-success text-white">
+                <h6><i class="fas fa-save"></i> Zapisz Zmiany</h6>
+              </div>
+              <div class="card-body">
+                <button type="submit" class="btn btn-success btn-block mb-2">
+                  <i class="fas fa-save"></i> Zapisz Rezerwację
+                </button>
+
+                <a th:href="@{'/admin/reservations/' + ${reservation.id}}"
+                   class="btn btn-info btn-block mb-2">
+                  <i class="fas fa-eye"></i> Podgląd
+                </a>
+
+                <a th:href="@{/admin/reservations}" class="btn btn-secondary btn-block">
+                  <i class="fas fa-arrow-left"></i> Anuluj
+                </a>
+              </div>
+            </div>
+
+            <!-- Pomoc -->
+            <div class="card mt-3">
+              <div class="card-header bg-warning text-white">
+                <h6><i class="fas fa-question-circle"></i> Pomoc</h6>
+              </div>
+              <div class="card-body">
+                <small>
+                  <strong>Wskazówki:</strong><br>
+                  • Sprawdź dostępność pokoju przed zmianą dat<br>
+                  • Zmiana statusu na "CANCELLED" anuluje rezerwację<br>
+                  • Cena zostanie automatycznie przeliczona przy zmianie dat
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function loadRoomsForHotel(hotelId) {
+    if (!hotelId) {
+      $('#roomId').html('<option value="">-- Wybierz pokój --</option>');
+      return;
+    }
+
+    // Tu możesz dodać AJAX call do ładowania pokoi dla wybranego hotelu
+    // Lub przekierować na stronę z parametrem hotelId
+  }
+
+  // Walidacja dat
+  document.getElementById('checkIn').addEventListener('change', function() {
+    const checkIn = this.value;
+    const checkOut = document.getElementById('checkOut');
+
+    if (checkIn) {
+      checkOut.min = checkIn;
+
+      // Jeśli data wyjazdu jest wcześniejsza niż przyjazd, wyczyść ją
+      if (checkOut.value && checkOut.value <= checkIn) {
+        checkOut.value = '';
+      }
+    }
+  });
+</script>
 </body>
 </html>

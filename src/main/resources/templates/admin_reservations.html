@@ -2,100 +2,322 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Wszystkie Rezerwacje - Admin</title>
-  <link rel="stylesheet" href="/css/custom.css">
-
+  <title>Zarządzanie Rezerwacjami</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/admin_nav :: admin_nav}"></div>
 
-<div class="container mt-4">
-  <h1>📋 Wszystkie Rezerwacje</h1>
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-12">
+      <h1><i class="fas fa-calendar-check"></i> Zarządzanie Rezerwacjami</h1>
 
-  <!-- Błędy -->
-  <div th:if="${error}" class="alert alert-danger">
-    <span th:text="${error}">Błąd</span>
-  </div>
+      <!-- Komunikaty -->
+      <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${message}"></span>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+      <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
 
-  <!-- Debug -->
-  <div class="alert alert-info">
-    <strong>Debug:</strong>
-    Rezerwacje = <span th:text="${reservations != null ? 'Lista z ' + #lists.size(reservations) + ' elementami' : 'NULL'}">test</span>
-  </div>
+      <!-- Szybkie akcje -->
+      <div class="mb-3">
+        <a th:href="@{/admin/reservations/management}" class="btn btn-primary">
+          <i class="fas fa-hotel"></i> Widok Hotelowy
+        </a>
+        <a th:href="@{/admin/reservations/new}" class="btn btn-success">
+          <i class="fas fa-plus"></i> Nowa Rezerwacja
+        </a>
+        <button onclick="exportToExcel()" class="btn btn-info">
+          <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+      </div>
 
-  <!-- Sprawdź czy reservations nie jest null -->
-  <div th:if="${reservations != null}">
-    <!-- Statystyki -->
-    <div class="row mb-4">
-      <div class="col-md-4">
-        <div class="card bg-primary text-white">
-          <div class="card-body text-center">
-            <h5>Wszystkie rezerwacje</h5>
-            <h2 th:text="${#lists.size(reservations)}">0</h2>
+      <!-- Filtry -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-filter"></i> Filtry</h5>
+          <form method="get" th:action="@{/admin/reservations}" class="form-inline">
+            <div class="form-group mr-3">
+              <label for="status" class="mr-2">Status:</label>
+              <select name="status" id="status" class="form-control">
+                <option value="">Wszystkie</option>
+                <option th:each="st : ${statusOptions}"
+                        th:value="${st}"
+                        th:text="${st}"
+                        th:selected="${st == currentStatus}"></option>
+              </select>
+            </div>
+
+            <div class="form-group mr-3">
+              <label for="hotelId" class="mr-2">Hotel:</label>
+              <select name="hotelId" id="hotelId" class="form-control">
+                <option value="">Wszystkie hotele</option>
+                <option th:each="hotel : ${hotels}"
+                        th:value="${hotel.id}"
+                        th:text="${hotel.name}"
+                        th:selected="${hotel.id == currentHotelId}"></option>
+              </select>
+            </div>
+
+            <div class="form-group mr-3">
+              <label for="username" class="mr-2">Użytkownik:</label>
+              <input type="text" name="username" id="username"
+                     th:value="${currentUsername}" class="form-control"
+                     placeholder="Nazwa użytkownika lub część nazwy">
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search"></i> Filtruj
+            </button>
+            <a th:href="@{/admin/reservations}" class="btn btn-secondary ml-2">
+              <i class="fas fa-times"></i> Wyczyść
+            </a>
+          </form>
+        </div>
+      </div>
+
+      <!-- Statystyki -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card text-white bg-primary">
+            <div class="card-body">
+              <div class="card-body-icon"><i class="fas fa-calendar-check"></i></div>
+              <div class="mr-5"><strong th:text="${reservations.totalElements}"></strong> Rezerwacji</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-white bg-success">
+            <div class="card-body">
+              <div class="card-body-icon"><i class="fas fa-check-circle"></i></div>
+              <div class="mr-5">
+                <strong th:text="${confirmedCount}"></strong>
+                Potwierdzonych
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-white bg-warning">
+            <div class="card-body">
+              <div class="card-body-icon"><i class="fas fa-clock"></i></div>
+              <div class="mr-5">
+                <strong th:text="${pendingCount}"></strong>
+                Oczekujących
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card text-white bg-danger">
+            <div class="card-body">
+              <div class="card-body-icon"><i class="fas fa-times-circle"></i></div>
+              <div class="mr-5">
+                <strong th:text="${cancelledCount}"></strong>
+                Anulowanych
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela rezerwacji -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover">
+              <thead class="thead-dark">
+              <tr>
+                <th>
+                  <a th:href="@{/admin/reservations(sortBy='id', sortDir=${currentSortDir == 'asc' ? 'desc' : 'asc'})}"
+                     class="text-white text-decoration-none">
+                    ID <i class="fas fa-sort"></i>
+                  </a>
+                </th>
+                <th>Gość</th>
+                <th>Kontakt</th>
+                <th>Hotel</th>
+                <th>Pokój</th>
+                <th>
+                  <a th:href="@{/admin/reservations(sortBy='checkIn', sortDir=${currentSortDir == 'asc' ? 'desc' : 'asc'})}"
+                     class="text-white text-decoration-none">
+                    Przyjazd <i class="fas fa-sort"></i>
+                  </a>
+                </th>
+                <th>Wyjazd</th>
+                <th>Status</th>
+                <th>Cena</th>
+                <th>Akcje</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr th:each="reservation : ${reservations.content}" th:if="${reservation != null}">
+                <td><strong th:text="${reservation.id}"></strong></td>
+
+                <!-- Dane gościa -->
+                <td>
+                  <div th:if="${userDetails[reservation.username] != null}">
+                    <strong th:text="${userDetails[reservation.username].firstName + ' ' + userDetails[reservation.username].lastName}"></strong><br>
+                    <small class="text-muted" th:text="'@' + ${reservation.username}"></small>
+                  </div>
+                  <div th:if="${userDetails[reservation.username] == null}">
+                    <span th:text="${reservation.username}"></span>
+                  </div>
+                </td>
+
+                <!-- Kontakt -->
+                <td>
+                  <div th:if="${userDetails[reservation.username] != null}">
+                    <small>
+                      <i class="fas fa-envelope"></i> <span th:text="${userDetails[reservation.username].email}"></span><br>
+                      <i class="fas fa-phone" th:if="${userDetails[reservation.username].phoneNumber != null}"></i>
+                      <span th:text="${userDetails[reservation.username].phoneNumber}"></span>
+                    </small>
+                  </div>
+                </td>
+
+                <!-- Hotel -->
+                <td>
+                  <a th:if="${hotelDetails[reservation.hotelId] != null}"
+                     th:href="@{'/admin/reservations/hotel/' + ${reservation.hotelId}}"
+                     th:text="${hotelDetails[reservation.hotelId].name}"
+                     class="text-primary"></a>
+                  <span th:if="${hotelDetails[reservation.hotelId] == null}"
+                        th:text="'ID: ' + ${reservation.hotelId}"></span>
+                </td>
+
+                <!-- Pokój -->
+                <td th:if="${roomDetails[reservation.roomId] != null}">
+                  <strong th:text="${roomDetails[reservation.roomId].roomNumber}"></strong><br>
+                  <small th:text="${roomDetails[reservation.roomId].roomType}"></small>
+                </td>
+                <td th:if="${roomDetails[reservation.roomId] == null}">
+                  <span th:text="'ID: ' + ${reservation.roomId}"></span>
+                </td>
+
+                <!-- Daty -->
+                <td>
+                  <strong th:text="${#temporals.format(reservation.checkIn, 'dd.MM.yyyy')}"></strong><br>
+                  <small th:text="${#temporals.format(reservation.checkIn, 'EEEE')}"></small>
+                </td>
+                <td>
+                  <strong th:text="${#temporals.format(reservation.checkOut, 'dd.MM.yyyy')}"></strong><br>
+                  <small th:text="${#temporals.format(reservation.checkOut, 'EEEE')}"></small>
+                </td>
+
+                <!-- Status -->
+                <td>
+                  <span class="badge"
+                        th:classappend="${reservation.status == 'CONFIRMED'} ? 'badge-success' :
+                                       (${reservation.status == 'CANCELLED'} ? 'badge-danger' :
+                                       (${reservation.status == 'PENDING'} ? 'badge-warning' : 'badge-info'))"
+                        th:text="${reservation.status}"></span>
+                </td>
+
+                <!-- Cena -->
+                <td>
+                  <strong th:text="${reservation.totalPrice != null ? reservation.totalPrice + ' zł' : 'N/A'}"></strong>
+                </td>
+
+                <!-- Akcje -->
+                <td>
+                  <div class="btn-group-vertical btn-group-sm" role="group">
+                    <a th:href="@{'/admin/reservations/' + ${reservation.id}}"
+                       class="btn btn-info btn-sm" title="Szczegóły">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a th:href="@{'/admin/reservations/' + ${reservation.id} + '/edit'}"
+                       class="btn btn-warning btn-sm" title="Edytuj">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <form th:if="${reservation.status != 'CANCELLED'}"
+                          th:action="@{'/admin/reservations/' + ${reservation.id} + '/cancel'}"
+                          method="post" style="display: inline;">
+                      <button type="submit" class="btn btn-danger btn-sm"
+                              onclick="return confirm('Czy na pewno anulować rezerwację?')"
+                              title="Anuluj">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Brak danych -->
+          <div th:if="${#lists.isEmpty(reservations.content)}" class="text-center py-4">
+            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">Brak rezerwacji</h4>
+            <p class="text-muted">Nie znaleziono rezerwacji spełniających kryteria wyszukiwania.</p>
+            <a th:href="@{/admin/reservations}" class="btn btn-primary">
+              <i class="fas fa-refresh"></i> Wyczyść filtry
+            </a>
+          </div>
+
+          <!-- Stronicowanie -->
+          <nav th:if="${reservations.totalPages > 1}">
+            <ul class="pagination justify-content-center">
+              <li class="page-item" th:classappend="${reservations.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/reservations(page=${reservations.number - 1}, size=${reservations.size}, status=${currentStatus}, hotelId=${currentHotelId}, username=${currentUsername})}">
+                  Poprzednia
+                </a>
+              </li>
+
+              <li th:each="i : ${#numbers.sequence(0, reservations.totalPages - 1)}"
+                  class="page-item" th:classappend="${i == reservations.number} ? 'active'">
+                <a class="page-link"
+                   th:href="@{/admin/reservations(page=${i}, size=${reservations.size}, status=${currentStatus}, hotelId=${currentHotelId}, username=${currentUsername})}"
+                   th:text="${i + 1}"></a>
+              </li>
+
+              <li class="page-item" th:classappend="${reservations.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/admin/reservations(page=${reservations.number + 1}, size=${reservations.size}, status=${currentStatus}, hotelId=${currentHotelId}, username=${currentUsername})}">
+                  Następna
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <!-- Info o stronicowaniu -->
+          <div class="text-center text-muted mt-3">
+            Pokazano <strong th:text="${reservations.numberOfElements}"></strong> z
+            <strong th:text="${reservations.totalElements}"></strong> rezerwacji
+            (strona <strong th:text="${reservations.number + 1}"></strong> z
+            <strong th:text="${reservations.totalPages}"></strong>)
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Lista rezerwacji -->
-    <div class="card">
-      <div class="card-header">
-        <h3>Lista wszystkich rezerwacji</h3>
-      </div>
-      <div class="card-body">
-        <div th:if="${#lists.isEmpty(reservations)}" class="alert alert-warning">
-          <h4>📋 Brak rezerwacji!</h4>
-          <p>W systemie nie ma żadnych rezerwacji</p>
-        </div>
-
-        <div th:if="${!#lists.isEmpty(reservations)}">
-          <table class="table table-striped">
-            <thead>
-            <tr>
-              <th>ID</th>
-              <th>Hotel</th>
-              <th>Użytkownik</th>
-              <th>Data przyjazdu</th>
-              <th>Data wyjazdu</th>
-              <th>Pokój</th>
-              <th>Akcje</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="reservation : ${reservations}">
-              <td th:text="${reservation.id}">ID</td>
-              <td th:text="${reservation.hotelId}">Hotel ID</td>
-              <td th:text="${reservation.username}">Username</td>
-              <td th:text="${reservation.checkIn}">Data in</td>
-              <td th:text="${reservation.checkOut}">Data out</td>
-              <td th:text="${reservation.roomId}">Room ID</td>
-              <td>
-                <a th:href="@{/admin/reservations/edit/{id}(id=${reservation.id})}"
-                   class="btn btn-sm btn-warning">Edytuj</a>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Jeśli reservations jest null -->
-  <div th:if="${reservations == null}" class="alert alert-danger">
-    <h4>❌ Brak danych!</h4>
-    <p>Zmienna 'reservations' jest null - problem z kontrolerem!</p>
-  </div>
-
-  <!-- Linki -->
-  <div class="mt-4">
-    <a href="/admin/hotels/dashboard" class="btn btn-secondary">← Dashboard</a>
   </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function exportToExcel() {
+    window.location.href = '/admin/reservations/export/excel';
+  }
+
+  // Podpowiedzi wyszukiwania użytkowników
+  $('#username').on('input', function() {
+    const query = $(this).val();
+    if (query.length > 2) {
+      $.get('/admin/reservations/search-users', { query: query })
+              .done(function(data) {
+                // Można dodać dropdown z podpowiedziami
+                console.log('Znalezieni użytkownicy:', data);
+              });
+    }
+  });
+</script>
 </body>
 </html>

@@ -16,7 +16,8 @@ public class CacheConfig {
     public CacheManager cacheManager() {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
         cacheManager.setCacheNames(Arrays.asList(
-                "hotels", "rooms", "availability", "reviews"
+                "hotels", "rooms", "availability", "reviews",
+                "roomStats"  // ✅ DODANO BRAKUJĄCY CACHE
         ));
         return cacheManager;
     }

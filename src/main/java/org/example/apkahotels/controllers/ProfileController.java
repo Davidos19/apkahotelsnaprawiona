@@ -122,7 +122,7 @@ public class ProfileController {
             String username = authentication.getName();
             List<Reservation> reservations = reservationService.getReservationsByUsername(username);
 
-            // ✅ ZAWSZE INICJALIZUJ MAPY - nawet jeśli puste!
+            // ✅ INICJALIZUJ MAPY
             Map<Long, Hotel> hotelDetails = new HashMap<>();
             Map<Long, Room> roomDetails = new HashMap<>();
 
@@ -156,7 +156,7 @@ public class ProfileController {
                     }
                 }
             } else {
-                // Brak rezerwacji - ustaw pustą listę
+                // Brak rezerwacji
                 reservations = new ArrayList<>();
             }
 
@@ -176,12 +176,12 @@ public class ProfileController {
             model.addAttribute("reservations", new ArrayList<>());
             model.addAttribute("hotelDetails", new HashMap<>());
             model.addAttribute("roomDetails", new HashMap<>());
-            return "my_reservations"; // ✅ Nie przekierowuj na index!
+            return "my_reservations"; // ✅
         }
     }
 
 
-    // ✅ NOWA ZMIANA HASŁA - PRZEZ BAZĘ DANYCH!
+    // ✅ Zmiana hasla przez baze danych
     @PostMapping("/profile/update")
     public String updatePassword(@ModelAttribute("passwordUpdateForm") @Valid PasswordUpdateForm form,
                                  BindingResult bindingResult,
@@ -224,24 +224,62 @@ public class ProfileController {
     }
 
     // Formularz edycji profilu – przykładowo, edycja danych takich jak email, imię, nazwisko
-    @GetMapping("/profile/edit")
-    public String editProfile(Model model) {
-        AppUser user = userService.getCurrentUser();
-        model.addAttribute("user", user);
-        return "edit_profile"; // widok edit_profile.html
-    }
 
-    // Zapis edytowanego profilu
     @PostMapping("/profile/save")
-    public String saveProfile(@ModelAttribute("user") AppUser user, RedirectAttributes redirectAttributes) {
+    public String saveProfile(@ModelAttribute("user") AppUser user,
+                              RedirectAttributes redirectAttributes,
+                              Authentication authentication) {
         try {
-            // ✅ ZAPISZ W BAZIE DANYCH
+            // Pobierz aktualnego użytkownika z bazy danych
+            String currentUsername = authentication.getName();
+            Optional<AppUser> existingUserOpt = userService.findByUsername(currentUsername);
+
+            if (existingUserOpt.isEmpty()) {
+                redirectAttributes.addFlashAttribute("error", "Użytkownik nie został znaleziony.");
+                return "redirect:/profile";
+            }
+
+            AppUser existingUser = existingUserOpt.get();
+
+            // Zachowaj pola które nie powinny być edytowane
+            user.setPassword(existingUser.getPassword()); // Zachowaj hasło
+            user.setUsername(existingUser.getUsername()); // Zachowaj nazwę użytkownika
+            user.setRole(existingUser.getRole()); // Zachowaj rolę
+            user.setRoles(existingUser.getRoles()); // Zachowaj role
+            user.setActive(existingUser.isActive()); // Zachowaj status aktywności
+            user.setCreatedAt(existingUser.getCreatedAt()); // Zachowaj datę utworzenia
+            user.setLastLogin(existingUser.getLastLogin()); // Zachowaj ostatnie logowanie
+            user.setProfileImageUrl(existingUser.getProfileImageUrl()); // Zachowaj zdjęcie profilu
+
+            // Zaktualizuj datę modyfikacji
+            user.setUpdatedAt(java.time.LocalDateTime.now());
+
+            // Zapisz użytkownika
             userService.updateUser(user);
             redirectAttributes.addFlashAttribute("message", "Profil został zaktualizowany.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Błąd przy zapisywaniu profilu: " + e.getMessage());
         }
         return "redirect:/profile";
+    }
+
+    @GetMapping("/profile/edit")
+    public String editProfile(Model model, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            Optional<AppUser> userOpt = userService.findByUsername(username);
+
+            if (userOpt.isEmpty()) {
+                model.addAttribute("error", "Użytkownik nie został znaleziony");
+                return "profile";
+            }
+
+            model.addAttribute("user", userOpt.get());
+            return "edit_profile";
+        } catch (Exception e) {
+            model.addAttribute("error", "Błąd przy ładowaniu profilu: " + e.getMessage());
+            return "profile";
+        }
     }
 
     // Historia rezerwacji użytkownika
